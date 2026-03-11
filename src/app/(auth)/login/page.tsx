@@ -20,7 +20,7 @@ export default function LoginPage() {
         <LoginForm />
       </div>
       <p className="mt-6 text-center text-xs text-muted-foreground">
-        Construction Site Inventory Management System
+        Construction Site Inventory Management System (WIP)
         <br />
         &copy; {new Date().getFullYear()} Fusion Limited
       </p>
