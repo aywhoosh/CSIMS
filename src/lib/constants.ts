@@ -11,6 +11,7 @@ import {
   ClipboardCheck,
   Settings,
   ShieldAlert,
+  TrendingUp,
 } from "lucide-react"
 
 export type UserRole = "admin" | "site_manager" | "store_keeper"
@@ -48,6 +49,7 @@ export const NAV_ITEMS = [
     group: "Operations",
     items: [
       { label: "Alerts", href: "/alerts", icon: Bell, roles: ["admin", "site_manager", "store_keeper"] as UserRole[] },
+      { label: "Insights", href: "/insights", icon: TrendingUp, roles: ["admin", "site_manager", "store_keeper"] as UserRole[] },
       { label: "Stock Audit", href: "/audits", icon: ClipboardCheck, roles: ["admin", "site_manager"] as UserRole[] },
       { label: "Admin Panel", href: "/admin", icon: ShieldAlert, roles: ["admin"] as UserRole[] },
       { label: "Settings", href: "/settings", icon: Settings, roles: ["admin"] as UserRole[] },

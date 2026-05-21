@@ -3,7 +3,7 @@ import { type SupabaseClient } from "@supabase/supabase-js"
 export async function getTransactions(supabase: SupabaseClient) {
   const { data, error } = await supabase
     .from("inventory_transactions")
-    .select("*, inventory_items(name, code, unit), profiles(full_name)")
+    .select("*, inventory_items(name, code, unit), sites(name), profiles(full_name)")
     .order("created_at", { ascending: false })
 
   if (error) throw error

@@ -4,6 +4,7 @@ import { getTransactions } from "@/lib/queries/transactions"
 import { DataTable } from "@/components/shared/data-table"
 import { PageHeader } from "@/components/shared/page-header"
 import { columns } from "@/components/transactions/transaction-columns"
+import { TransactionExportButton } from "@/components/pdf/transaction-export-button"
 import { Button } from "@/components/ui/button"
 import { ArrowDownToLine, ArrowUpFromLine } from "lucide-react"
 
@@ -19,6 +20,7 @@ export default async function TransactionsPage() {
           <p className="text-muted-foreground">Track material inward and outward movements</p>
         </div>
         <div className="flex gap-2">
+          <TransactionExportButton transactions={transactions as any} />
           <Button asChild>
             <Link href="/transactions/inward/new">
               <ArrowDownToLine className="mr-2 h-4 w-4" />

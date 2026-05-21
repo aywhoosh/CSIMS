@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/layout/sidebar"
 import { TopBar } from "@/components/layout/top-bar"
 import { MobileNav } from "@/components/layout/mobile-nav"
+import { FuseChat } from "@/components/chatbot/fuse-chat"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import type { UserRole } from "@/lib/constants"
@@ -96,6 +97,7 @@ export default function DashboardLayout({
         />
         <main className="flex-1 p-6">{children}</main>
       </div>
+      <FuseChat />
     </div>
   )
 }

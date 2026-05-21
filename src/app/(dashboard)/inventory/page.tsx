@@ -3,6 +3,7 @@ import { getInventoryItems } from "@/lib/queries/inventory"
 import { DataTable } from "@/components/shared/data-table"
 import { PageHeader } from "@/components/shared/page-header"
 import { columns } from "@/components/inventory/inventory-columns"
+import { InventoryExportButton } from "@/components/pdf/inventory-export-button"
 import { Plus } from "lucide-react"
 
 export default async function InventoryPage() {
@@ -11,11 +12,14 @@ export default async function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Inventory"
-        description="Manage materials and stock levels"
-        action={{ label: "Add Material", href: "/inventory/new", icon: Plus }}
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Inventory"
+          description="Manage materials and stock levels"
+          action={{ label: "Add Material", href: "/inventory/new", icon: Plus }}
+        />
+        <InventoryExportButton items={items as any} />
+      </div>
       <DataTable
         columns={columns}
         data={items}

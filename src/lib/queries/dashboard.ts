@@ -56,13 +56,13 @@ export async function getCategoryDistribution(supabase: SupabaseClient) {
 }
 
 export async function getTransactionTrends(supabase: SupabaseClient) {
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
 
   const { data, error } = await supabase
     .from("inventory_transactions")
     .select("type, quantity, transaction_date")
-    .gte("transaction_date", thirtyDaysAgo.toISOString().split("T")[0])
+    .gte("transaction_date", ninetyDaysAgo.toISOString().split("T")[0])
     .order("transaction_date")
 
   if (error) throw error
