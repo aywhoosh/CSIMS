@@ -3,6 +3,11 @@
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport } from "ai"
 import { useState, useRef, useEffect } from "react"
+
+const MIN_WIDTH = 300
+const MAX_WIDTH = 720
+const MIN_HEIGHT = 380
+const MAX_HEIGHT = 860
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MessageCircle, X, Send, Loader2, Bot, Sparkles } from "lucide-react"
@@ -19,7 +24,14 @@ const SUGGESTIONS = [
 export function FuseChat() {
   const [open, setOpen] = useState(false)
   const [inputValue, setInputValue] = useState("")
+  const [size, setSize] = useState({ width: 380, height: 580 })
   const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Resize state (refs to avoid stale closures in global mouse handlers)
+  const isResizing = useRef(false)
+  const resizeDir = useRef({ x: false, y: false })
+  const startPos = useRef({ x: 0, y: 0 })
+  const startSize = useRef({ width: 380, height: 580 })
 
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
@@ -27,12 +39,51 @@ export function FuseChat() {
 
   const isLoading = status === "submitted" || status === "streaming"
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages (not on empty state)
   useEffect(() => {
-    if (scrollRef.current) {
+    if (scrollRef.current && messages.length > 0) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  // Global mouse handlers for resize drag
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isResizing.current) return
+      const dx = startPos.current.x - e.clientX
+      const dy = startPos.current.y - e.clientY
+      setSize({
+        width: resizeDir.current.x
+          ? Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, startSize.current.width + dx))
+          : startSize.current.width,
+        height: resizeDir.current.y
+          ? Math.min(MAX_HEIGHT, Math.max(MIN_HEIGHT, startSize.current.height + dy))
+          : startSize.current.height,
+      })
+    }
+    const onMouseUp = () => {
+      if (!isResizing.current) return
+      isResizing.current = false
+      document.body.style.userSelect = ""
+      document.body.style.cursor = ""
+    }
+    window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mouseup", onMouseUp)
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mouseup", onMouseUp)
+    }
+  }, [])
+
+  const startResize = (e: React.MouseEvent, x: boolean, y: boolean) => {
+    e.preventDefault()
+    isResizing.current = true
+    resizeDir.current = { x, y }
+    startPos.current = { x: e.clientX, y: e.clientY }
+    startSize.current = { ...size }
+    document.body.style.userSelect = "none"
+    document.body.style.cursor = x && y ? "nw-resize" : x ? "ew-resize" : "ns-resize"
+  }
 
   const handleSuggestion = (text: string) => {
     setInputValue(text)
@@ -64,7 +115,25 @@ export function FuseChat() {
 
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-[380px] max-h-[580px] flex flex-col rounded-2xl border bg-background shadow-2xl overflow-hidden">
+        <div
+          className="fixed bottom-6 right-6 z-50 flex flex-col rounded-2xl border bg-background shadow-2xl overflow-hidden"
+          style={{ width: size.width, height: size.height }}
+        >
+          {/* Resize handle — top-left corner */}
+          <div
+            className="absolute top-0 left-0 w-3 h-3 z-20 cursor-nw-resize"
+            onMouseDown={(e) => startResize(e, true, true)}
+          />
+          {/* Resize handle — left edge */}
+          <div
+            className="absolute left-0 top-3 bottom-0 w-1.5 z-20 cursor-ew-resize"
+            onMouseDown={(e) => startResize(e, true, false)}
+          />
+          {/* Resize handle — top edge */}
+          <div
+            className="absolute top-0 left-3 right-0 h-1.5 z-20 cursor-ns-resize"
+            onMouseDown={(e) => startResize(e, false, true)}
+          />
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-primary/5">
             <div className="flex items-center gap-2.5">
@@ -96,17 +165,19 @@ export function FuseChat() {
             onWheel={(e) => e.stopPropagation()}
           >
             {messages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
-                <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-primary" />
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-col items-center gap-3 text-center pt-6 pb-2">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">How can I help?</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Ask about stock levels, POs, suppliers, or today&apos;s priorities.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium">How can I help?</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Ask about stock levels, POs, suppliers, or today&apos;s priorities.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1.5 w-full mt-1">
+                <div className="flex flex-col gap-1.5 w-full">
                   {SUGGESTIONS.map((s) => (
                     <button
                       key={s}
