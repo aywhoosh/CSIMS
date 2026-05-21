@@ -25,6 +25,12 @@ export const pdfStyles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 10,
   },
+  companyLogo: {
+    width: 90,
+    height: 36,
+    objectFit: "contain",
+    marginBottom: 3,
+  },
   companyName: {
     fontSize: 14,
     fontFamily: "Helvetica-Bold",

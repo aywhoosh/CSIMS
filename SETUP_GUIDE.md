@@ -47,15 +47,21 @@ Create a file called `.env.local` in the project root:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...your-full-anon-key
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...your-full-service-role-key
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key
 ```
 
-Replace the values with the ones you copied from Step 2.
+### How to get each value:
+
+1. **`NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`** — From Step 2
+2. **`SUPABASE_SERVICE_ROLE_KEY`** — Go to your Supabase project dashboard, **Project Settings** > **API** > under "Project API keys" find the `service_role` key and copy it
+3. **`GOOGLE_GENERATIVE_AI_API_KEY`** — Go to [Google AI Studio](https://aistudio.google.com/apikey), click **Create API Key**, select a project (or create a new one), and copy the key
 
 ---
 
 ## Step 4: Set Up the Database
 
-You need to run 4 SQL migration files in order. Each one builds on the previous.
+You need to run 5 SQL migration files in order. Each one builds on the previous.
 
 1. Go to your Supabase project dashboard
 2. Click **SQL Editor** in the left sidebar
@@ -68,6 +74,7 @@ You need to run 4 SQL migration files in order. Each one builds on the previous.
 | 2nd | `supabase/migrations/20260308000002_create_tables.sql` | Creates all 13 tables (sites, profiles, inventory_items, etc.) |
 | 3rd | `supabase/migrations/20260308000003_create_functions_triggers.sql` | Creates triggers for auto stock updates, PO status transitions, payment tracking |
 | 4th | `supabase/migrations/20260308000004_create_rls_policies.sql` | Creates Row Level Security policies for role-based access |
+| 5th | `supabase/migrations/20260308000005_create_admin_functions.sql` | Creates admin utility functions for seeding and clearing data |
 
 **How to run each file:**
 - Open the file from the `supabase/migrations/` folder in any text editor
@@ -79,7 +86,7 @@ You need to run 4 SQL migration files in order. Each one builds on the previous.
 
 ### Load Sample Data (Optional but Recommended)
 
-After all 4 migrations are done, run the seed file:
+After all 5 migrations are done, run the seed file:
 
 - Open `supabase/seed.sql`, copy its contents into the SQL Editor, and run it
 - This creates demo data: 2 construction sites, 5 suppliers, 20 inventory items, 12 categories, and 6 storage locations
@@ -187,6 +194,57 @@ The left sidebar provides access to all modules:
 
 ---
 
+## Fuse — AI Inventory Assistant
+
+**Fuse** is an AI chatbot built into CSIMS to help answer inventory questions in natural language.
+
+### Setup
+
+The chatbot requires a Google AI API key (configured in Step 3 as `GOOGLE_GENERATIVE_AI_API_KEY`):
+
+- If you haven't set it up yet, go to [Google AI Studio](https://aistudio.google.com/apikey) and create an API key
+- Add it to your `.env.local` file
+- Restart the app (`npm run dev`)
+
+### Using Fuse
+
+1. Look for the **Fuse** chat bubble in the bottom-right corner of any CSIMS page
+2. Click to open the chat
+3. Ask questions like:
+   - _"What are my low stock items?"_
+   - _"Show me today's inventory movements"_
+   - _"Which suppliers are overdue?"_
+   - _"What's the total inventory value?"_
+
+The chatbot queries your Supabase database in real-time and responds with accurate, up-to-date insights.
+
+<!-- ![Fuse chatbot](docs/fuse-chatbot.png) -->
+
+---
+
+## PDF Export
+
+Generate professional PDF reports with company branding.
+
+### Supported Documents
+
+| Document | How to Export |
+|----------|-------------|
+| **Purchase Order** | Open a PO detail view > Click "Export PDF" button |
+| **Invoice** | Open an invoice detail view > Click "Export PDF" button |
+| **Stock Audit** | Open an audit detail view > Click "Export PDF" button |
+
+### Features
+
+- **Company branding**: Fusion logo and company name in the header
+- **Client-side processing**: Happens in your browser — your data never leaves your device
+- **Professional layout**: Formatted tables with status indicators, metadata, and totals
+- **Print-ready**: Optimized for A4 paper size and printers
+
+<!-- ![PDF export sample](docs/pdf-export-sample.png) -->
+
+---
+
 ## Building for Production
 
 ```bash
@@ -210,10 +268,11 @@ The production build runs on `http://localhost:3000` by default.
 ```
 CSIMS/
 ├── supabase/
-│   ├── migrations/           # 4 SQL files (run in order)
+│   ├── migrations/           # 5 SQL files (run in order)
 │   └── seed.sql              # Demo data
 ├── src/
 │   ├── app/
+│   │   ├── api/chat/         # Fuse chatbot streaming endpoint
 │   │   ├── (auth)/login/     # Login page
 │   │   ├── (dashboard)/      # All authenticated pages
 │   │   │   ├── dashboard/    # KPI dashboard
@@ -231,6 +290,8 @@ CSIMS/
 │   ├── components/
 │   │   ├── ui/               # shadcn/ui primitives (button, card, dialog, etc.)
 │   │   ├── layout/           # Sidebar, TopBar, MobileNav
+│   │   ├── chatbot/          # Fuse chat widget and message components
+│   │   ├── pdf/              # PDF export components and shared styles
 │   │   ├── shared/           # DataTable, PageHeader, StatusBadge, etc.
 │   │   ├── dashboard/        # Charts and widgets
 │   │   └── [module]/         # Module-specific columns, forms, details
@@ -241,12 +302,29 @@ CSIMS/
 │       ├── actions/          # Server actions (create, update, delete)
 │       ├── queries/          # Data fetching functions
 │       ├── hooks/            # Custom React hooks
+│       ├── chatbot/          # Fuse tools and system prompt
 │       ├── utils.ts          # formatCurrency, formatDate, cn()
 │       └── constants.ts      # Nav items, units, status colors
+├── public/
+│   └── fusion_logo.png       # Company logo (used in PDF headers)
 ├── .env.example              # Template for environment variables
 ├── package.json
 └── README.md
 ```
+
+---
+
+## Chatbot API Overview
+
+The CSIMS project includes a Fuse chatbot, an intelligent inventory assistant designed to help users with inventory management tasks. The chatbot API provides:
+
+- A natural language interface for querying inventory, stock risks, purchase orders, invoices, suppliers, and transactions.
+- Read-only access: The chatbot can fetch and summarize data but cannot modify records.
+- Context-aware responses: Answers are tailored to the user’s role (Administrator, Site Manager, Store Keeper) and assigned site.
+- Professional, concise, and actionable insights, with support for bullet points and tables for readability.
+- Secure handling of sensitive data using environment variables.
+
+The chatbot is implemented in the `src/lib/chatbot` directory and is integrated with the rest of the CSIMS application.
 
 ---
 

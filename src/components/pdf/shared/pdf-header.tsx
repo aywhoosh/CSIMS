@@ -1,4 +1,4 @@
-import { View, Text } from "@react-pdf/renderer"
+import { View, Text, Image } from "@react-pdf/renderer"
 import { pdfStyles } from "./pdf-styles"
 
 interface PdfHeaderProps {
@@ -6,9 +6,11 @@ interface PdfHeaderProps {
   title: string
   meta?: Record<string, string>
   generatedBy?: string
+  /** URL or path to the company logo. Defaults to /fusion_logo.png from the public folder. */
+  logoSrc?: string
 }
 
-export function PdfHeader({ reportType, title, meta = {}, generatedBy }: PdfHeaderProps) {
+export function PdfHeader({ reportType, title, meta = {}, generatedBy, logoSrc = "/fusion_logo.png" }: PdfHeaderProps) {
   const today = new Date().toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -20,6 +22,7 @@ export function PdfHeader({ reportType, title, meta = {}, generatedBy }: PdfHead
       <View style={pdfStyles.headerRow}>
         {/* Left: Company identity */}
         <View>
+          <Image src={logoSrc} style={pdfStyles.companyLogo} />
           <Text style={pdfStyles.companyName}>Blessing Homz Pvt. Ltd.</Text>
           <Text style={pdfStyles.companyTagline}>Construction Site Inventory Management System</Text>
         </View>

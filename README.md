@@ -108,8 +108,7 @@ The system covers the full procurement-to-consumption cycle: from creating a pur
 | Purchase Orders | `/purchase-orders` | PO creation, line items, status tracking |
 | Invoices | `/invoices` | Invoice recording with payment tracking |
 | Stock Audits | `/audits` | Physical verification and variance reports |
-| Alerts | `/alerts` | Low stock, out of stock, reorder suggestions |
-| Settings | `/settings` | User profile view |
+| Alerts | `/alerts` | Low stock, out of stock, reorder suggestions || Fuse Chatbot | Floating bubble | AI-powered chat assistant for inventory queries || Settings | `/settings` | User profile view |
 | Admin | `/admin` | Database stats, seed data, clear data actions |
 
 ---
@@ -124,8 +123,8 @@ The system covers the full procurement-to-consumption cycle: from creating a pur
 | Backend & Database | Supabase (PostgreSQL + Auth + RLS) |
 | Charts | Recharts |
 | Forms & Validation | React Hook Form + Zod |
-| Tables | TanStack Table (react-table v8) |
-| Notifications | Sonner |
+| Tables | TanStack Table (react-table v8) || AI Chatbot | AI SDK v6 + @ai-sdk/google (Gemini) |
+| PDF Generation | @react-pdf/renderer || Notifications | Sonner |
 | Deployment | Vercel + Supabase Cloud |
 
 ---
@@ -157,13 +156,14 @@ Fill in your Supabase credentials (see [Environment Variables](#environment-vari
 
 ### 3. Set up the database
 
-Run the four migration files **in order** via the Supabase SQL Editor:
+Run the five migration files **in order** via the Supabase SQL Editor:
 
 ```
 supabase/migrations/20260308000001_create_enums.sql
 supabase/migrations/20260308000002_create_tables.sql
 supabase/migrations/20260308000003_create_functions_triggers.sql
 supabase/migrations/20260308000004_create_rls_policies.sql
+supabase/migrations/20260308000005_create_admin_functions.sql
 ```
 
 Optionally load sample data:
@@ -193,13 +193,17 @@ Create a `.env.local` file in the project root with the following:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# Gemini AI API (for Fuse Chatbot)
+GOOGLE_GENERATIVE_AI_API_KEY=your_google_ai_api_key
 ```
 
 | Variable | Where to find it |
-|----------|-----------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard &rarr; Project Settings &rarr; API &rarr; Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard &rarr; Project Settings &rarr; API &rarr; `anon` `public` key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard &rarr; Project Settings &rarr; API &rarr; `service_role` key |
+|----------|---------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase Dashboard → Project Settings → API → Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Dashboard → Project Settings → API → `anon` `public` key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase Dashboard → Project Settings → API → `service_role` key |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) → Create API Key |
 
 ---
 
@@ -257,12 +261,14 @@ Access is enforced at the database level via Supabase Row Level Security policie
 CSIMS/
 ├── assets/                      # Source brand assets (logos, favicon)
 ├── docs/                        # Screenshots and documentation media
-├── public/                      # Static files served by Next.js
+├── public/
+│   └── fusion_logo.png          # Company logo (used in PDF headers)
 ├── supabase/
-│   ├── migrations/              # 4 SQL migration files (run in order)
+│   ├── migrations/              # 5 SQL migration files (run in order)
 │   └── seed.sql                 # Sample data for development
 ├── src/
 │   ├── app/
+│   │   ├── api/chat/            # Fuse chatbot streaming endpoint
 │   │   ├── (auth)/login/        # Login page
 │   │   ├── (dashboard)/         # Authenticated routes
 │   │   │   ├── admin/           # Admin panel (stats, seed, clear)
@@ -281,13 +287,16 @@ CSIMS/
 │   ├── components/
 │   │   ├── admin/               # Admin-specific components
 │   │   ├── auth/                # Auth components
+│   │   ├── chatbot/             # Fuse chat widget and message components
 │   │   ├── dashboard/           # Charts and widgets
 │   │   ├── layout/              # Sidebar, TopBar, MobileNav
+│   │   ├── pdf/                 # PDF export components and shared styles
 │   │   ├── shared/              # DataTable, PageHeader, StatusBadge
 │   │   ├── ui/                  # shadcn/ui primitives
 │   │   └── [module]/            # Module-specific columns, forms, details
 │   └── lib/
 │       ├── actions/             # Server actions (mutations)
+│       ├── chatbot/             # Fuse tools and system prompt
 │       ├── hooks/               # Custom React hooks
 │       ├── queries/             # Data fetching functions
 │       ├── supabase/            # Supabase client utilities
@@ -300,6 +309,54 @@ CSIMS/
 ├── package.json
 └── tsconfig.json
 ```
+
+---
+
+## Fuse — AI Inventory Assistant
+
+**Fuse** is an AI-powered chatbot built into CSIMS to help you understand your inventory at a glance.
+
+### Features
+
+- **Ask questions** about stock levels, low stock items, transaction trends, supplier performance, and more
+- **Get insights** on inventory health, reorder recommendations, and risk alerts
+- **Real-time data** — queries are processed against your live Supabase database
+- **Natural language** — no special syntax; just ask in plain English
+
+### How to Use
+
+1. Look for the **Fuse** chat bubble in the bottom-right corner of any page
+2. Click to open and start chatting
+3. Example questions:
+   - _"What are my low stock items?"_
+   - _"Show me the 10-day transaction summary"_
+   - _"Which suppliers have overdue invoices?"_
+   - _"What's the total value of my current inventory?"_
+
+<!-- ![Fuse chatbot](docs/fuse-chatbot.png) -->
+
+---
+
+## PDF Export
+
+Generate professional PDF reports with company branding for key documents.
+
+### Supported Exports
+
+| Document | Route | Trigger |
+|----------|-------|---------|
+| Purchase Order | `/purchase-orders/[id]` | "Export PDF" button on detail view |
+| Invoice | `/invoices/[id]` | "Export PDF" button on detail view |
+| Stock Audit | `/audits/[id]` | "Export PDF" button on detail view |
+
+### Features
+
+- **Company branding** — Fusion logo in header with company name
+- **Client-side generation** — processed in your browser (private, fast)
+- **Professional layout** — formatted tables, status badges, metadata
+- **Print-ready** — optimized for A4 paper and printers
+
+<!-- ![PDF export sample](docs/pdf-export-sample.png) -->
 
 ---
 
@@ -333,7 +390,7 @@ Planned enhancements for future releases:
 
 - Barcode / QR code integration for material scanning
 - Email notifications for low stock and overdue invoices
-- PDF report generation and export
+- ~~PDF report generation and export~~ ✅ Implemented
 - Dedicated mobile application for on-site use
 - Integration with accounting software (Tally, QuickBooks)
 - Predictive demand forecasting with analytics
@@ -373,7 +430,6 @@ Construction sites face significant challenges in manual inventory management, i
 
 - No barcode/QR code scanning integration
 - No automated email/SMS notifications
-- Reports are viewed in-app only (no PDF/Excel export)
 - Single organization deployment (no multi-tenancy)
 - No mobile app (responsive web only)
 
